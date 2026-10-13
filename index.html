@@ -41,10 +41,10 @@ addEventListener('resize',size);size();
 
 const TIME=30,INTRO='Move with your finger, mouse or arrow keys. Hold to spray (or press space). 30 seconds!';
 let state='start',germs=[],mist=[],sparks=[],score=0,lives=3,left=TIME,spawn=0,last=0,idle=null;
-let wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
+let bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
 const gy=()=>H-36;
 
-function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
+function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
 function end(){
   state='over';spraying=false;
   T.textContent=lives>0?'Fresh and confident!':'So close! Try again.';
@@ -77,13 +77,14 @@ function addGerm(){
   const big=Math.random()<.22,r=(big?40:26)*K;
   germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:big?2:1,v:(big?75:115)+Math.random()*45+(TIME-left)*2.5,t:Math.random()*6,flash:0,big});
 }
+function addBoss(){const r=62*K;germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:4,v:55,t:Math.random()*6,flash:0,big:true,boss:true})}
 function fire(){
   const nx=wx,ny=gy()-172*K;
   for(let i=0;i<5;i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*90,vy:-(520+Math.random()*200),l:.5});
   let best=null;
   for(const o of germs)if(o.hp>0&&o.y<ny&&ny-o.y<520*K&&Math.abs(o.x-nx)<o.r+26*K&&(!best||o.y>best.y))best=o;
   if(best){best.hp--;best.flash=.2;
-    if(best.hp<=0){score++;for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
+    if(best.hp<=0){score+=best.boss?3:1;for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
 }
 function setX(e){const r=cv.getBoundingClientRect();tx=Math.min(W-30,Math.max(30,e.clientX-r.left))}
 cv.addEventListener('pointerdown',e=>{if(state!=='play')return;cv.setPointerCapture(e.pointerId);setX(e);spraying=true});
@@ -98,15 +99,16 @@ function drawGerm(o){
   g.save();g.translate(o.x,o.y);g.scale(s,s);
   g.strokeStyle='#d9c24a';g.lineWidth=3;g.lineCap='round';
   for(let i=-1;i<=1;i++){g.beginPath();const x=i*o.r*.5;g.moveTo(x,-o.r-6);g.bezierCurveTo(x-7,-o.r-14,x+7,-o.r-20,x,-o.r-28);g.stroke()}
-  g.fillStyle=o.flash>0?'#fff':(o.big?'#6f9a2c':'#8fb83c');
+  g.fillStyle=o.flash>0?'#fff':(o.boss?'#4d6f1c':(o.big?'#6f9a2c':'#8fb83c'));
   for(let i=0;i<10;i++){const a=i*Math.PI/5;g.beginPath();g.arc(Math.cos(a)*o.r,Math.sin(a)*o.r,o.r*.2,0,7);g.fill()}
   g.beginPath();g.arc(0,0,o.r,0,7);g.fill();
+  if(o.boss){g.fillStyle=o.flash>0?'#fff':PK;g.beginPath();g.moveTo(-o.r*.6,-o.r*.7);g.lineTo(-o.r*.4,-o.r*1.3);g.lineTo(-o.r*.15,-o.r*.9);g.moveTo(o.r*.6,-o.r*.7);g.lineTo(o.r*.4,-o.r*1.3);g.lineTo(o.r*.15,-o.r*.9);g.fill()}
   g.fillStyle='rgba(0,0,0,.12)';g.beginPath();g.arc(o.r*.4,o.r*.35,o.r*.16,0,7);g.arc(-o.r*.45,o.r*.45,o.r*.1,0,7);g.fill();
   g.fillStyle='#fff';g.beginPath();g.arc(-o.r*.32,-o.r*.1,o.r*.2,0,7);g.arc(o.r*.32,-o.r*.1,o.r*.2,0,7);g.fill();
   g.fillStyle='#2a1a33';g.beginPath();g.arc(-o.r*.32,-o.r*.06,o.r*.09,0,7);g.arc(o.r*.32,-o.r*.06,o.r*.09,0,7);g.fill();
   g.strokeStyle='#2a1a33';g.lineWidth=2.5;g.beginPath();g.moveTo(-o.r*.55,-o.r*.38);g.lineTo(-o.r*.12,-o.r*.26);g.moveTo(o.r*.55,-o.r*.38);g.lineTo(o.r*.12,-o.r*.26);g.stroke();
   g.beginPath();g.arc(0,o.r*.5,o.r*.2,Math.PI*1.1,Math.PI*1.9);g.stroke();
-  if(o.hp>1){g.fillStyle=PK;g.fillRect(-o.r*.5,o.r+8,o.r,5)}
+  if(o.hp>1){g.fillStyle=PK;g.fillRect(-o.r*.5,o.r+8,o.r*(o.boss?o.hp/4:1),5)}
   g.restore();
 }
 function drawWoman(){
@@ -140,7 +142,7 @@ function frame(ts){
   g.fillStyle='rgba(95,55,110,.07)';
   for(const c of [[.15,.25,60],[.7,.18,80],[.45,.5,50],[.88,.55,70]]){g.beginPath();g.arc(c[0]*W,c[1]*H,c[2]*K,0,7);g.fill()}
   if(state==='play'){
-    left-=dt;spawn-=dt;
+    left-=dt;spawn-=dt;if(TIME-left<=10){bossT-=dt;if(bossT<=0){addBoss();bossT=3.5}}
     if(keys.ArrowLeft||keys.a)tx=Math.max(30,wx-400*dt*1.2);
     if(keys.ArrowRight||keys.d)tx=Math.min(W-30,wx+400*dt*1.2);
     cool-=dt;
