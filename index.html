@@ -41,12 +41,12 @@ addEventListener('resize',size);size();
 
 const TIME=30,INTRO='Move with your finger, mouse or arrow keys. Hold to spray (or press space). 30 seconds!';
 let state='start',germs=[],mist=[],sparks=[],score=0,lives=3,left=TIME,spawn=0,last=0,idle=null;
-let boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
+let bannerT=0,bannerTxt='',boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
 const gy=()=>H-36;
 
-function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
+function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;bannerT=0;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
 function end(){
-  state='over';spraying=false;boost=0;
+  state='over';spraying=false;boost=0;bannerT=0;
   T.textContent=lives>0?'Fresh and confident!':'So close! Try again.';
   S.textContent='You killed '+score+' germ'+(score===1?'':'s')+'. Stay fresh with Oliv+ care.';
   B.textContent='Play again';
@@ -75,16 +75,19 @@ renderLB();fetchGlobal();
 
 function addGerm(){
   const big=Math.random()<.22,r=(big?40:26)*K;
-  germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:big?2:1,v:(big?75:115)+Math.random()*45+(TIME-left)*2.5,t:Math.random()*6,flash:0,big});
+  germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:big?2:1,/* ★CHANGED: 25% faster in first 10s */ v:((big?75:115)+Math.random()*45+(TIME-left)*2.5)*(TIME-left<=10?1.25:1),t:Math.random()*6,flash:0,big});
 }
-function addBoss(){const r=62*K;germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:4,v:55,t:Math.random()*6,flash:0,big:true,boss:true})}
+/* ★NEW: boss germ */
+function banner(t){bannerTxt=t;bannerT=1.6}
+function addBoss(){banner('BOSS INCOMING!');const r=62*K;germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:4,v:55,t:Math.random()*6,flash:0,big:true,boss:true})}
+/* ★CHANGED: burst spray while boosted */
 function fire(){
-  const nx=wx,ny=gy()-172*K;
-  for(let i=0;i<5;i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*90,vy:-(520+Math.random()*200),l:.5});
-  let best=null;
-  for(const o of germs)if(o.hp>0&&o.y<ny&&ny-o.y<520*K&&Math.abs(o.x-nx)<o.r+26*K&&(!best||o.y>best.y))best=o;
-  if(best){best.hp--;best.flash=.2;
-    if(best.hp<=0){score+=best.boss?3:1;if(best.boss&&TIME-left<=10)boost=8;for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
+  const nx=wx,ny=gy()-172*K,bs=boost>0;
+  for(let i=0;i<(bs?16:5);i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*(bs?520:90),vy:-(520+Math.random()*200),l:.5});
+  const hits=germs.filter(o=>o.hp>0&&o.y<ny&&ny-o.y<520*K&&Math.abs(o.x-nx)<o.r+(bs?90:26)*K).sort((a,b)=>b.y-a.y).slice(0,bs?3:1);
+  for(const best of hits){best.hp--;best.flash=.2;
+    if(best.hp<=0){score+=best.boss?3:1;if(best.boss&&(TIME-left<=10||left<=10)){boost=8;banner('BOOST! BURST SPRAY!')} /* ★CHANGED: boost from boss in first or last 10s */
+      for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
 }
 function setX(e){const r=cv.getBoundingClientRect();tx=Math.min(W-30,Math.max(30,e.clientX-r.left))}
 cv.addEventListener('pointerdown',e=>{if(state!=='play')return;cv.setPointerCapture(e.pointerId);setX(e);spraying=true});
@@ -102,7 +105,8 @@ function drawGerm(o){
   g.fillStyle=o.flash>0?'#fff':(o.boss?'#4d6f1c':(o.big?'#6f9a2c':'#8fb83c'));
   for(let i=0;i<10;i++){const a=i*Math.PI/5;g.beginPath();g.arc(Math.cos(a)*o.r,Math.sin(a)*o.r,o.r*.2,0,7);g.fill()}
   g.beginPath();g.arc(0,0,o.r,0,7);g.fill();
-  if(o.boss){g.fillStyle=o.flash>0?'#fff':PK;g.beginPath();g.moveTo(-o.r*.6,-o.r*.7);g.lineTo(-o.r*.4,-o.r*1.3);g.lineTo(-o.r*.15,-o.r*.9);g.moveTo(o.r*.6,-o.r*.7);g.lineTo(o.r*.4,-o.r*1.3);g.lineTo(o.r*.15,-o.r*.9);g.fill()}
+  /* ★NEW: boss glow ring + BOSS label */ if(o.boss){g.save();g.strokeStyle=PK;g.lineWidth=5;g.globalAlpha=.55+.35*Math.sin(o.t*8);g.beginPath();g.arc(0,0,o.r+12,0,7);g.stroke();g.restore();g.fillStyle=PK;g.font="700 15px Poppins,system-ui,sans-serif";g.textAlign='center';g.textBaseline='middle';g.fillText('BOSS',0,-o.r*1.3-12)}
+  /* ★NEW: boss horns */ if(o.boss){g.fillStyle=o.flash>0?'#fff':PK;g.beginPath();g.moveTo(-o.r*.6,-o.r*.7);g.lineTo(-o.r*.4,-o.r*1.3);g.lineTo(-o.r*.15,-o.r*.9);g.moveTo(o.r*.6,-o.r*.7);g.lineTo(o.r*.4,-o.r*1.3);g.lineTo(o.r*.15,-o.r*.9);g.fill()}
   g.fillStyle='rgba(0,0,0,.12)';g.beginPath();g.arc(o.r*.4,o.r*.35,o.r*.16,0,7);g.arc(-o.r*.45,o.r*.45,o.r*.1,0,7);g.fill();
   g.fillStyle='#fff';g.beginPath();g.arc(-o.r*.32,-o.r*.1,o.r*.2,0,7);g.arc(o.r*.32,-o.r*.1,o.r*.2,0,7);g.fill();
   g.fillStyle='#2a1a33';g.beginPath();g.arc(-o.r*.32,-o.r*.06,o.r*.09,0,7);g.arc(o.r*.32,-o.r*.06,o.r*.09,0,7);g.fill();
@@ -112,7 +116,7 @@ function drawGerm(o){
   g.restore();
 }
 function drawWoman(){
-  g.save();g.translate(wx,gy()-(boost>0?16*K:0));g.scale(face*K,K);if(boost>0){g.fillStyle=PK;g.fillRect(-36,0,72,6);g.fillStyle=P;g.beginPath();g.arc(-22,11,5,0,7);g.arc(22,11,5,0,7);g.fill()}
+  g.save();g.translate(wx,gy()-(boost>0?16*K:0));g.scale(face*K,K);/* ★NEW: skateboard */ if(boost>0){g.fillStyle=PK;g.globalAlpha=.22+.1*Math.sin(performance.now()/120);g.beginPath();g.arc(0,-90,90,0,7);g.fill();g.globalAlpha=1;g.fillRect(-36,0,72,6);g.fillStyle=P;g.beginPath();g.arc(-22,11,5,0,7);g.arc(22,11,5,0,7);g.fill()}
   const b=Math.sin(walk)*3,sw=Math.sin(walk)*6;
   g.fillStyle='#d9a07c';
   g.fillRect(-12+sw,-52,9,52);g.fillRect(3-sw,-52,9,52);
@@ -142,12 +146,12 @@ function frame(ts){
   g.fillStyle='rgba(95,55,110,.07)';
   for(const c of [[.15,.25,60],[.7,.18,80],[.45,.5,50],[.88,.55,70]]){g.beginPath();g.arc(c[0]*W,c[1]*H,c[2]*K,0,7);g.fill()}
   if(state==='play'){
-    left-=dt;spawn-=dt;boost=Math.max(0,boost-dt);if(TIME-left<=10){bossT-=dt;if(bossT<=0){addBoss();bossT=3.5}}
+    const pl=left;left-=dt;if(pl>10&&left<=10)banner('LAST 10 SECONDS!');spawn-=dt;/* ★NEW: boost timer */ boost=Math.max(0,boost-dt);/* ★NEW: boss germs in first AND last 10s */ if(TIME-left<=10||left<=10){bossT-=dt;if(bossT<=0){addBoss();bossT=left<=10?4.5:3.5}}
     if(keys.ArrowLeft||keys.a)tx=Math.max(30,wx-400*dt*1.2*(boost>0?1.8:1));
     if(keys.ArrowRight||keys.d)tx=Math.min(W-30,wx+400*dt*1.2*(boost>0?1.8:1));
     cool-=dt;
     if((spraying||keys[' '])&&cool<=0){fire();cool=boost>0?.09:.16}
-    const dx=tx-wx,st=Math.min(Math.abs(dx),(boost>0?780:420)*dt)*Math.sign(dx);
+    /* ★CHANGED: faster walking when boosted */ const dx=tx-wx,st=Math.min(Math.abs(dx),(boost>0?780:420)*dt)*Math.sign(dx);
     wx+=st;if(Math.abs(st)>.5){face=st>0?1:-1;walk+=dt*14}else walk*=.8;
     if(spawn<=0){addGerm();if(TIME-left>12&&Math.random()<.35)addGerm();if(left<=10){addGerm();if(Math.random()<.3)addGerm()}spawn=left<=10?.4:Math.max(.3,.8-(TIME-left)*.02)}
     for(const o of germs){o.y+=o.v*dt;o.t+=dt;o.flash-=dt;if(o.hp>0&&o.y+o.r>=gy()){o.hp=0;lives--}}
@@ -164,7 +168,8 @@ function frame(ts){
   g.textAlign='left';g.font="500 13px Poppins,system-ui,sans-serif";g.fillText('Killed',16,12);g.font="700 28px Poppins,system-ui,sans-serif";g.fillText(score,16,28);
   g.fillStyle=left<=10?PK:P;g.textAlign='center';g.font="500 13px Poppins,system-ui,sans-serif";g.fillText('Time',W/2,12);g.font="700 28px Poppins,system-ui,sans-serif";g.fillText(Math.ceil(Math.max(left,0))+'s',W/2,28);
   g.font="700 24px Poppins,system-ui,sans-serif";g.textAlign='right';g.fillStyle=PK;g.fillText('♥'.repeat(Math.max(lives,0)),W-16,14);
-  if(boost>0){g.textAlign='center';g.fillStyle=PK;g.font="700 16px Poppins,system-ui,sans-serif";g.fillText('SKATEBOARD BOOST!',W/2,64);g.fillRect(W/2-60,86,120*(boost/8),5)}
+  /* ★NEW: big banner text */ if(bannerT>0){bannerT-=dt;g.globalAlpha=Math.min(1,bannerT);g.textAlign='center';g.font="700 "+Math.round(34*K)+"px Poppins,system-ui,sans-serif";g.lineWidth=6;g.strokeStyle='#fff';g.strokeText(bannerTxt,W/2,H*.3);g.fillStyle=PK;g.fillText(bannerTxt,W/2,H*.3);g.globalAlpha=1}
+  /* ★NEW: boost label */ if(boost>0){g.textAlign='center';g.fillStyle=PK;g.font="700 16px Poppins,system-ui,sans-serif";g.fillText('SKATEBOARD + BURST SPRAY!',W/2,64);g.fillRect(W/2-60,86,120*(boost/8),5)}
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
