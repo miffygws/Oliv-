@@ -29,7 +29,7 @@ button:focus-visible{outline:4px solid var(--purple);outline-offset:3px}
   <div id="lb"></div>
   <div id="nf" class="gone"><input id="nm" maxlength="12" placeholder="Your name" aria-label="Your name"><button id="sv">Save score</button><button id="sk">Skip</button></div>
   <button id="b">Start</button>
-  <p id="lkp">Understand how to kill the germs and balance your “down there” microflora <br><a id="lk" href="https://olivpluscare.com/product/deo-spray/" target="_blank" rel="noopener">Oliv+ Intimate deospray</a></p>
+  <p id="lkp">Understand how to kill the germs and balance your “down there” microflora <br><a id="lk" href="https://olivpluscare.com/en/product/deo-spray-en/" target="_blank" rel="noopener">Oliv+ Intimate deospray</a></p>
 </div>
 <script>
 const cv=document.getElementById('c'),g=cv.getContext('2d'),ui=document.getElementById('ui');
@@ -41,10 +41,10 @@ addEventListener('resize',size);size();
 
 const TIME=30,INTRO='Move with your finger, mouse or arrow keys. Hold to spray (or press space). 30 seconds!';
 let state='start',germs=[],mist=[],sparks=[],score=0,lives=3,left=TIME,spawn=0,last=0,idle=null;
-let bannerT=0,bannerTxt='',boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
+let el=0,bonus=false,bannerT=0,bannerTxt='',boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
 const gy=()=>H-36;
 
-function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;bannerT=0;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
+function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;bannerT=0;el=0;bonus=false;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
 function end(){
   state='over';spraying=false;boost=0;bannerT=0;
   T.textContent=lives>0?'Fresh and confident!':'So close! Try again.';
@@ -75,7 +75,7 @@ renderLB();fetchGlobal();
 
 function addGerm(){
   const big=Math.random()<.22,r=(big?40:26)*K;
-  germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:big?2:1,/* ★CHANGED: 25% faster in first 10s */ v:((big?75:115)+Math.random()*45+(TIME-left)*2.5)*(TIME-left<=10?1.25:1),t:Math.random()*6,flash:0,big});
+  germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:big?2:1,/* ★CHANGED: 25% faster in first 10s */ v:((big?75:115)+Math.random()*45+(el)*2.5)*(el<=10?1.25:1),t:Math.random()*6,flash:0,big});
 }
 /* ★NEW: boss germ */
 function banner(t){bannerTxt=t;bannerT=1.6}
@@ -86,7 +86,7 @@ function fire(){
   for(let i=0;i<(bs?16:5);i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*(bs?520:90),vy:-(520+Math.random()*200),l:.5});
   const hits=germs.filter(o=>o.hp>0&&o.y<ny&&ny-o.y<520*K&&Math.abs(o.x-nx)<o.r+(bs?90:26)*K).sort((a,b)=>b.y-a.y).slice(0,bs?3:1);
   for(const best of hits){best.hp--;best.flash=.2;
-    if(best.hp<=0){score+=best.boss?3:1;if(best.boss&&(TIME-left<=10||left<=10)){boost=8;banner('BOOST! BURST SPRAY!')} /* ★CHANGED: boost from boss in first or last 10s */
+    if(best.hp<=0){score+=best.boss?3:1;if(best.boss&&(el<=10||left<=10)){boost=8;banner('BOOST! BURST SPRAY!')} /* ★CHANGED: boost from boss in first or last 10s */
       for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
 }
 function setX(e){const r=cv.getBoundingClientRect();tx=Math.min(W-30,Math.max(30,e.clientX-r.left))}
@@ -146,16 +146,17 @@ function frame(ts){
   g.fillStyle='rgba(95,55,110,.07)';
   for(const c of [[.15,.25,60],[.7,.18,80],[.45,.5,50],[.88,.55,70]]){g.beginPath();g.arc(c[0]*W,c[1]*H,c[2]*K,0,7);g.fill()}
   if(state==='play'){
-    const pl=left;left-=dt;if(pl>10&&left<=10)banner('LAST 10 SECONDS!');spawn-=dt;/* ★NEW: boost timer */ boost=Math.max(0,boost-dt);/* ★NEW: boss germs in first AND last 10s */ if(TIME-left<=10||left<=10){bossT-=dt;if(bossT<=0){addBoss();bossT=left<=10?4.5:3.5}}
+    const pl=left;left-=dt;el+=dt;if(pl>10&&left<=10)banner('LAST 10 SECONDS!');spawn-=dt;/* ★NEW: boost timer */ boost=Math.max(0,boost-dt);/* ★NEW: boss germs in first AND last 10s */ if(el<=10||left<=10){bossT-=dt;if(bossT<=0){addBoss();bossT=left<=10?4.5:3.5}}
     if(keys.ArrowLeft||keys.a)tx=Math.max(30,wx-400*dt*1.2*(boost>0?1.8:1));
     if(keys.ArrowRight||keys.d)tx=Math.min(W-30,wx+400*dt*1.2*(boost>0?1.8:1));
     cool-=dt;
     if((spraying||keys[' '])&&cool<=0){fire();cool=boost>0?.09:.16}
     /* ★CHANGED: faster walking when boosted */ const dx=tx-wx,st=Math.min(Math.abs(dx),(boost>0?780:420)*dt)*Math.sign(dx);
     wx+=st;if(Math.abs(st)>.5){face=st>0?1:-1;walk+=dt*14}else walk*=.8;
-    if(spawn<=0){addGerm();if(TIME-left>12&&Math.random()<.35)addGerm();if(left<=10){addGerm();if(Math.random()<.3)addGerm()}spawn=left<=10?.4:Math.max(.3,.8-(TIME-left)*.02)}
+    if(spawn<=0){addGerm();if(el>12&&Math.random()<.35)addGerm();if(left<=10){addGerm();if(Math.random()<.3)addGerm()}spawn=left<=10?.4:Math.max(.3,.8-(el)*.02)}
     for(const o of germs){o.y+=o.v*dt;o.t+=dt;o.flash-=dt;if(o.hp>0&&o.y+o.r>=gy()){o.hp=0;lives--}}
     germs=germs.filter(o=>o.hp>0);
+    /* ★NEW: 100 kills = +15 bonus seconds (once per round) */ if(!bonus&&score>=100){bonus=true;left+=15;banner('BONUS +15 SECONDS!')}
     if(lives<=0||left<=0)end();
   }
   for(const o of germs)drawGerm(o);
