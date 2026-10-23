@@ -44,7 +44,7 @@ let state='start',germs=[],mist=[],sparks=[],score=0,lives=3,left=TIME,spawn=0,l
 let el=0,bonus=false,bannerT=0,bannerTxt='',boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
 const gy=()=>H-36;
 /* ★NEW: SPEED = overall speed (raise to make everything faster); also scales up on bigger screens */
-const SPEED=1.3,gs=()=>SPEED*Math.max(1,H/650),ms=()=>Math.max(1,W/800);
+const SPEED=1.8,gs=()=>SPEED*Math.max(1,H/650),ms=()=>Math.max(1,W/800);
 
 function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;bannerT=0;el=0;bonus=false;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
 function end(){
@@ -84,9 +84,9 @@ function banner(t){bannerTxt=t;bannerT=1.6}
 function addBoss(){banner('BOSS INCOMING!');const r=62*K;germs.push({x:r+Math.random()*(W-2*r),y:-r,r,hp:4,v:55,t:Math.random()*6,flash:0,big:true,boss:true})}
 /* ★CHANGED: burst spray while boosted */
 function fire(){
-  const nx=wx,ny=gy()-172*K,bs=boost>0;
-  for(let i=0;i<(bs?16:5);i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*(bs?520:90),vy:-(520+Math.random()*200),l:.5});
-  const hits=germs.filter(o=>o.hp>0&&o.y<ny&&ny-o.y<520*K&&Math.abs(o.x-nx)<o.r+(bs?90:26)*K).sort((a,b)=>b.y-a.y).slice(0,bs?3:1);
+  const nx=wx,ny=gy()-172*K,bs=boost>0,R=Math.max(520*K,H*.85)*(bs?1.4:1); /* ★CHANGED: spray reach grows with screen height; 40% longer burst when boosted */
+  for(let i=0;i<(bs?16:5);i++)mist.push({x:nx+(Math.random()-.5)*8,y:ny,vx:(Math.random()-.5)*(bs?520:90),vy:-(R*1.8+Math.random()*R*.4),l:.5});
+  const hits=germs.filter(o=>o.hp>0&&o.y<ny&&ny-o.y<R&&Math.abs(o.x-nx)<o.r+(bs?90:26)*K).sort((a,b)=>b.y-a.y).slice(0,bs?3:1);
   for(const best of hits){best.hp--;best.flash=.2;
     if(best.hp<=0){score+=best.boss?3:1;if(best.boss&&(el<=10||left<=10)){boost=8;banner('BOOST! BURST SPRAY!')} /* ★CHANGED: boost from boss in first or last 10s */
       for(let i=0;i<12;i++)sparks.push({x:best.x,y:best.y,vx:(Math.random()-.5)*300,vy:(Math.random()-.5)*300,l:.55,c:i%2?'#e7b8ff':PK})}}
