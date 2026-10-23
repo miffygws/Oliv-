@@ -39,12 +39,12 @@ let W,H,D,K;
 function size(){D=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*D;cv.height=H*D;g.setTransform(D,0,0,D,0,0);K=Math.min(1.2,Math.max(.7,H/650))}
 addEventListener('resize',size);size();
 
-const TIME=30,INTRO='Move with your finger, mouse or arrow keys. Hold to spray (or press space). 30 seconds! Kill 100 germs for +15 bonus seconds!';
+const TIME=30,INTRO='Move with your finger, mouse or arrow keys. Hold to spray (or press space). 30 seconds!';
 let state='start',germs=[],mist=[],sparks=[],score=0,lives=3,left=TIME,spawn=0,last=0,idle=null;
 let el=0,bonus=false,bannerT=0,bannerTxt='',boost=0,bossT=2,wx=0,tx=0,face=1,walk=0,spraying=false,cool=0,keys={};
 const gy=()=>H-36;
 /* ★NEW: SPEED = overall speed (raise to make everything faster); also scales up on bigger screens */
-const SPEED=1.8,gs=()=>SPEED*Math.max(1,H/650),ms=()=>Math.max(1,W/800);
+const SPEED=2.5,gs=()=>SPEED*Math.max(1,H/650),ms=()=>Math.max(1,W/800);
 
 function start(){germs=[];mist=[];sparks=[];score=0;lives=3;left=TIME;spawn=.5;bossT=2;boost=0;bannerT=0;el=0;bonus=false;wx=tx=W/2;spraying=false;state='play';ui.classList.add('hide');clearTimeout(idle);NF.classList.add('gone');fetchGlobal()}
 function end(){
